@@ -1,0 +1,53 @@
+---
+title: 'Analyzing the Impact: Predicting Quarterback Performance through Expected Points Added (EPA) in the 2023 NFL Season'
+author: "Yingqi Pang"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document: default
+  bookdown::pdf_document2:
+    extra_dependencies: float
+thanks: "Code and data are available at: https://github.com/pangyin2/Analyzing-the-Impact-Predicting-Quarterback-Performance-through-Expected-Points-Added-EPA-in-the-.git"
+toc: true
+---
+```{r, warning=FALSE, include=FALSE, echo=FALSE, message=FALSE}
+install.packages("nflverse")
+```
+
+```{r, warning=FALSE, include=FALSE, echo=FALSE, message=FALSE}
+library(nflverse)
+library(dplyr)
+library(knitr)
+```
+
+```{r, warning=FALSE, include=FALSE, echo=FALSE, message=FALSE}
+qb_regular_season_stats <- 
+  load_player_stats(seasons = TRUE) |> 
+  filter(season_type == "REG" & position == "QB")
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyr)
+library(caret)
+library(lubridate)
+
+qb_data <- qb_regular_season_stats %>%
+  filter(position == "QB" & week <= 9 & season == 2023)
+
+train_data <- qb_data %>%
+  select(player_id, player_name, recent_team, week, passing_epa) %>%
+  na.omit()
+
+set.seed(123)
+training_index <- createDataPartition(train_data$passing_epa, p = 0.8, list = FALSE)
+train_set <- train_data[training_index, ]
+test_set <- train_data[-training_index, ]
+
+kable(head(train_set), caption = "Training Data Set for QBs in the 2023 Season")
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+model <- lm(passing_epa ~ recent_team + week, data = train_set)
+predictions <- predict(model, newdata = test_set)
+validation_rmse <- sqrt(mean((predictions - test_set$passing_epa)^2))
+kable(validation_rmse)
+```
